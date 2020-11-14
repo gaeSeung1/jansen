@@ -272,6 +272,3 @@ while True:
     print("")
  
     sleep(1)
-
-
-출처: https://openmaker.tistory.com/42 [OpenMake]
