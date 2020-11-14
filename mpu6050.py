@@ -47,11 +47,6 @@ def get_y_rotation(x,y,z):
     return -math.degrees(radians)
 
  
-def get_z_rotation(x,y,z):
-
-    radians = math.atan2(z, dist(x,y))
-    return math.degrees(radians)
-
 bus = smbus.SMBus(1) # 라즈베리파이 버전 2 미만은 (0), 그 이상은 (1)로 지정
 address = 0x68       # i2cdetect 명령을 통해 읽은 주소 값
 
@@ -91,7 +86,6 @@ try:
                 print ("accel_zout: ", accel_zout, " scaled: ", accel_zout_scaled)
                 print ("x rotation: " , get_x_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled))
                 print ("y rotation: " , get_y_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled))
-                print ("z rotation: " , get_z_rotation(accel_xout_scaled, accel_yout_scaled, accel_zout_scaled))
                 print ("--------------------------------------------------------")
 
 

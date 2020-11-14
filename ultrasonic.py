@@ -24,8 +24,8 @@ def measure():
     return distance
 
 GPIO.setmode(GPIO.BCM)
-GPIO_TRIGGER = 20
-GPIO_ECHO    = 21
+GPIO_TRIGGER = 14
+GPIO_ECHO    = 15
  
 GPIO.setup(GPIO_TRIGGER,GPIO.OUT)
 GPIO.setup(GPIO_ECHO,GPIO.IN)
