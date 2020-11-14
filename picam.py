@@ -17,7 +17,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 	image = frame.array
 	# show the frame
 	cv2.imshow("Frame", image)
-	key = cv2.waitKey(0) & 0xFF
+	key = cv2.waitKey(1) & 0xFF
 	# clear the stream in preparation for the next frame
 	rawCapture.truncate(0)
 	# if the `q` key was pressed, break from the loop
