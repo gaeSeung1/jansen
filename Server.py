@@ -1,4 +1,4 @@
-PORT = 8000
+PORT = 5000
 
 from http.server import BaseHTTPRequestHandler
 import socketserver
