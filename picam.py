@@ -5,12 +5,13 @@ import time
 import cv2
 # initialize the camera and grab a reference to the raw camera capture
 camera = PiCamera()
-camera.resolution = (640, 480)
+camera.resolution = (320, 240)
 camera.framerate = 32
-rawCapture = PiRGBArray(camera, size=(640, 480))
+rawCapture = PiRGBArray(camera, size=camera.resolution)
 # allow the camera to warmup
 time.sleep(0.1)
 # capture frames from the camera
+n=1
 for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
 	# grab the raw NumPy array representing the image, then initialize the timestamp
 	# and occupied/unoccupied text
@@ -23,3 +24,6 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 	# if the `q` key was pressed, break from the loop
 	if key == ord("q"):
 		break
+	elif key == ord("c"):
+		camera.capture('output'+str(n)+'.jpg')
+		n = n + 1

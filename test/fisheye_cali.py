@@ -11,7 +11,7 @@ objp[0,:,:2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2)
 _img_shape = None
 objpoints = [] # 3d point in real world space
 imgpoints = [] # 2d points in image plane.
-images = glob.glob('check.jpg')
+images = glob.glob('*.jpg')
 for fname in images:
     img = cv2.imread(fname)
     if _img_shape == None:
@@ -20,6 +20,7 @@ for fname in images:
         assert _img_shape == img.shape[:2], "All images must share the same size."
     gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     # Find the chess board corners
+    print(fname,"1")
     ret, corners = cv2.findChessboardCorners(gray, CHECKERBOARD, cv2.CALIB_CB_ADAPTIVE_THRESH+cv2.CALIB_CB_FAST_CHECK+cv2.CALIB_CB_NORMALIZE_IMAGE)
     # If found, add object points, image points (after refining them)
     if ret == True:
