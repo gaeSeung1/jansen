@@ -7,7 +7,7 @@ import numpy as np
 import RPi.GPIO as GPIO
 from Time import Time
 from sys import argv
-import mpu9250_test as test
+import mpu9250_PID
 
 print(argv)
 
@@ -50,7 +50,7 @@ def main():
     gyro = 250      # 250, 500, 1000, 2000 [deg/s]
     acc = 2         # 2, 4, 7, 16 [g]
     tau = 0.98
-    mpu = test.MPU(gyro, acc, tau)
+    mpu = mpu9250_PID.MPU(gyro, acc, tau)
     # Set up sensor and calibrate gyro with N points
     mpu.setUp()
     mpu.calibrateGyro(500)
@@ -60,8 +60,8 @@ def main():
     targetDeg = 0
     Kp = 3.
     Kd = 0.
-    Ki = 0
-    dt = 0.
+    Ki = 10.
+    dt = 0.5
     dt_sleep = 0.01
     tolerance = 0.01
 
@@ -110,10 +110,7 @@ def main():
                     GPIO.output(motor21,GPIO.LOW)
                     GPIO.output(motor22,GPIO.HIGH)  
 
-                #General Control                  
-                p1.ChangeDutyCycle(abs(pw1))
-                p2.ChangeDutyCycle(abs(pw2))
-                print(abs(pw1), abs(pw2))
+
                 
                 #PID start
                 if action == "w":
@@ -133,10 +130,13 @@ def main():
                         p2.ChangeDutyCycle(abs(pw2))
                         print(pw1_PID, abs(pw2))
                     time.sleep(dt_sleep) 
+                else:
+                    #General Control                  
+                    p1.ChangeDutyCycle(abs(pw1))
+                    p2.ChangeDutyCycle(abs(pw2))
+                    print(abs(pw1), abs(pw2))
 
                 print("motorDeg :", motorDeg)
                 
                     
-
-
 main()
