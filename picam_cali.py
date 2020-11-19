@@ -13,6 +13,9 @@ D=np.array([[-0.07388057626177186], [0.037920859225125836], [-0.0306194905833731
 # initialize the camera and grab a reference to the raw camera capture
 camera = PiCamera()
 camera.resolution = (320, 240)
+#flip
+camera.vflip = True
+camera.hflip = True
 #shutterspeed
 camera.framerate = 32
 rawCapture = PiRGBArray(camera, size=camera.resolution)
@@ -50,6 +53,6 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
     # if the `q` key was pressed, break from the loop
     if key == ord("q"):
         break
-    elif key == ord("c"):
-        camera.capture('output'+str(n)+'.jpg')
+    elif key == ord("\t"):
+        cv2.imwrite('output'+str(n)+'.jpg', undistorted_image)
         n = n + 1

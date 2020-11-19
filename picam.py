@@ -24,6 +24,6 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 	# if the `q` key was pressed, break from the loop
 	if key == ord("q"):
 		break
-	elif key == ord("c"):
+	elif key == ord("\t"):
 		camera.capture('output'+str(n)+'.jpg')
 		n = n + 1
