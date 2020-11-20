@@ -130,8 +130,9 @@ def main():
                         p2.ChangeDutyCycle(abs(pw2))
                         print(pw1_PID, abs(pw2))
                     time.sleep(dt_sleep) 
-                else:
-                    #General Control                  
+
+                #General Control 
+                else:                 
                     p1.ChangeDutyCycle(abs(pw1))
                     p2.ChangeDutyCycle(abs(pw2))
                     print(abs(pw1), abs(pw2))
