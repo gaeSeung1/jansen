@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 import threading
-from ar_markers import detect_markers
+import ar_markers
 
 # You should replace these 3 lines with the output in calibration step
 DIM=(320, 240)
@@ -34,7 +34,9 @@ def cascade(img):
         objs = face_cascade.detectMultiScale(gray, 1.3, 5)
         for (x,y,w,h) in objs:
             cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
-        
+        if objs != ():
+            print('stop')
+
 #undistort
 def undistort(img):
     map1, map2 = cv2.fisheye.initUndistortRectifyMap(K, D, np.eye(3), K, DIM, cv2.CV_16SC2)
@@ -44,6 +46,8 @@ def undistort(img):
 
 def main():
     # capture frames from the camera
+
+    #for capture every second
     checktimeBefore = int(time.strftime('%S'))
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         # grab the raw NumPy array representing the image, then initialize the timestamp
@@ -54,12 +58,13 @@ def main():
         #undistort
         undistorted_image = undistort(image)
 
-        cascade
+        #cascade
         cascade(undistorted_image)
 
         #AR marker
-        markers = detect_markers(undistorted_image)
+        markers = ar_markers.detect_markers(undistorted_image)
         for marker in markers:
+            print('marker :', marker.id) #, marker.center)
             marker.highlite_marker(undistorted_image)
 
         # show the frame
