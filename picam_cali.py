@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 import threading
+from ar_markers import detect_markers
 
 # You should replace these 3 lines with the output in calibration step
 DIM=(320, 240)
@@ -41,38 +42,47 @@ def undistort(img):
 
     return undistorted_img
 
+def main():
+    # capture frames from the camera
+    checktimeBefore = int(time.strftime('%S'))
+    for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+        # grab the raw NumPy array representing the image, then initialize the timestamp
+        # and occupied/unoccupied text
 
-# capture frames from the camera
-checktimeBefore = int(time.strftime('%S'))
-for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
-	# grab the raw NumPy array representing the image, then initialize the timestamp
-	# and occupied/unoccupied text
+        image = frame.array
 
-    image = frame.array
+        #undistort
+        undistorted_image = undistort(image)
 
-    #undistort
-    undistorted_image = undistort(image)
+        cascade
+        cascade(undistorted_image)
 
-    #cascade
-    cascade(undistorted_image)
+        #AR marker
+        markers = detect_markers(undistorted_image)
+        for marker in markers:
+            marker.highlite_marker(undistorted_image)
+
+        # show the frame
+        cv2.imshow("Frame", undistorted_image)
+        key = cv2.waitKey(1) & 0xFF
         
-    # show the frame
-    cv2.imshow("Frame", undistorted_image)
-    key = cv2.waitKey(1) & 0xFF
-    
-    # clear the stream in preparation for the next frame
-    rawCapture.truncate(0)
+        # clear the stream in preparation for the next frame
+        rawCapture.truncate(0)
 
-    # capture negative images every second
-    switch = 0
-    checktime = int(time.strftime('%S'))
-    if checktime - checktimeBefore >=1 and switch == 1:
-        captured(undistorted_image)
-        checktimeBefore = checktime
+        # capture negative images every second
+        switch = 0
+        checktime = int(time.strftime('%S'))
+        if checktime - checktimeBefore >=1 and switch == 1:
+            captured(undistorted_image)
+            checktimeBefore = checktime
 
-    # if the `q` key was pressed, break from the loop
-    if key == ord("q"):
-        break
-    elif key == ord("\t"):
-        captured(undistorted_image)
+        # if the `q` key was pressed, break from the loop
+        if key == ord("q"):
+            break
+        elif key == ord("\t"):
+            captured(undistorted_image)
   
+    
+  
+if __name__ == '__main__':
+    main()
