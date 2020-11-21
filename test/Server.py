@@ -1,5 +1,5 @@
 # https://www.mixedcontentexamples.com
-file = 'steveholt.jpg'
+file = 'output2.jpg'
 host = 'localhost:6000'
 
 from http.client import HTTPConnection
@@ -33,8 +33,7 @@ def DownloadAndUpload():
 
 
 def UploadNumpy():
-    img = cv2.imread("steveholt.jpg")
-    #img = 255 * np.random.random((100, 100,3))
+    img = 255 * np.random.random((100, 100,3))
     print('shape', img.shape)
     result, img = cv2.imencode('.jpg', img, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
     if not result:
@@ -46,6 +45,6 @@ def UploadNumpy():
 
 
 if __name__ == '__main__':
-    #Download()
-    #DownloadAndUpload()
-    UploadNumpy()
+    Download()
+    DownloadAndUpload()
+    #UploadNumpy()
