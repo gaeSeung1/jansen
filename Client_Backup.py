@@ -10,7 +10,6 @@ from sys import argv
 
 print(argv)
 
-#motor init
 GPIO.setmode(GPIO.BCM)
 motor11=23
 motor12=24
@@ -35,7 +34,7 @@ p2.start(0)
 
 def main():
  
-    #key init
+    #initialization
     speed = 50
     HALF=0
     MOTOR_SPEEDS = {
@@ -58,11 +57,9 @@ def main():
         print('Connected')
         res = conn.getresponse()
         
-
-        #Control start        
+        
         while True:                        
             
-            #key read
             chunk = res.readline()
             if (chunk == b'\n'): continue
             if (not chunk): break
@@ -72,6 +69,7 @@ def main():
             print(Time(), data)
             action = data['action']
 
+#Control start
 
             #speed 50 or 100
             if action == "\t":
@@ -91,7 +89,7 @@ def main():
                 pw2 = speed * MOTOR_SPEEDS[action][1]
 
                 try:    
-                     #direction               
+                                    
                     if pw1>0:
                         GPIO.output(motor11,GPIO.HIGH)
                         GPIO.output(motor12,GPIO.LOW)
@@ -111,5 +109,6 @@ def main():
 
                 except KeyError as error:
                     print(error)
+
 
 main()
