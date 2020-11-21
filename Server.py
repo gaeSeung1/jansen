@@ -38,7 +38,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
     def do_POST(self):
-        print(self.headers['X-Client2Server'])
+        #print(self.headers['X-Client2Server'])
 
         self.send_response(200)
         self.send_header('X-Server2Client', '123')
@@ -50,7 +50,7 @@ class Handler(BaseHTTPRequestHandler):
             img = cv2.imdecode(data, cv2.IMREAD_ANYCOLOR)
             #Marker
             cv2.imshow('image', img)
-            print("ggg")
+            print("imshow")
             cv2.waitKey(1)
 
         else:
@@ -65,5 +65,5 @@ class Handler(BaseHTTPRequestHandler):
 
 with socketserver.TCPServer(("0.0.0.0", PORT), Handler) as _httpd:
     httpd = _httpd
-    print("HTTPServer Serving at port", PORT)
+    #print("HTTPServer Serving at port", PORT)
     httpd.serve_forever()
