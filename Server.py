@@ -65,5 +65,5 @@ class Handler(BaseHTTPRequestHandler):
 
 with socketserver.TCPServer(("0.0.0.0", PORT), Handler) as _httpd:
     httpd = _httpd
-    #print("HTTPServer Serving at port", PORT)
+    print("HTTPServer Serving at port", PORT)
     httpd.serve_forever()
