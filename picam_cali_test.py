@@ -5,9 +5,11 @@ import time
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
-import threading
 import ar_markers
 import ImageRW
+from Time import Time
+import threading
+from queue import Queue
 
 # You should replace these 3 lines with the output in calibration step
 DIM=(320, 240)
@@ -36,20 +38,24 @@ def cascade(img):
         for (x,y,w,h) in objs:
             cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
         if objs != ():
-            print('stop')
+            pass
+            #print('stop')
 
 #undistort
 def undistort(img):
     map1, map2 = cv2.fisheye.initUndistortRectifyMap(K, D, np.eye(3), K, DIM, cv2.CV_16SC2)
-    undistorted_img = cv2.remap(img, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+    img = cv2.remap(img, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
 
-    return undistorted_img
+    return img
+
+
 
 
 # capture frames from the camera
 
-def main():
 
+
+def main(q):
 
     #for capture every second
     checktimeBefore = int(time.strftime('%S'))
@@ -57,6 +63,9 @@ def main():
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         # grab the raw NumPy array representing the image, then initialize the timestamp
         # and occupied/unoccupied text
+
+        evt = threading.Event()
+
 
         image = frame.array
 
@@ -69,7 +78,7 @@ def main():
         #AR marker
         markers = ar_markers.detect_markers(undistorted_image)
         for marker in markers:
-            print('marker :', marker.id) #, marker.center)
+            #print('marker :', marker.id) #, marker.center)
             marker.highlite_marker(undistorted_image)
 
         # show the frame
@@ -83,17 +92,35 @@ def main():
         switch = 0
         checktime = int(time.strftime('%S'))
         if checktime - checktimeBefore >=1 and switch == 1:
-            captured(undistorted_image)
+            captured(undistorted_image)      
             checktimeBefore = checktime
 
         # Image_Streaming    
-        ImageRW.UploadNumpy(undistorted_image)
+        #ImageRW.UploadNumpy(undistorted_image)
 
+        data = undistorted_image
+        q.put((data, evt))
         # if the `q` key was pressed, break from the loop
         if key == ord("q"):
             break
         elif key == ord("\t"):
             captured(undistorted_image)
 
+def streaming(q):
+    while True:
+        data, evt = q.get()
+        print(data)
+        evt.set()
+        q.task_done()
 
-main()
+q = Queue()
+
+thread_one = threading.Thread(target=main, args=(q,))
+thread_two = threading.Thread(target=streaming, args=(q,))
+#thread_one.daemon = True
+thread_two.daemon = True
+thread_one.start()
+thread_two.start()
+ 
+q.join()
+
