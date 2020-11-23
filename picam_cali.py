@@ -3,7 +3,7 @@ PORT = 6000
 host = 'localhost'
 
 # 0 : main, 1 : capture every second, 2 : main+streaming
-switch = 2
+switch = 0
 
 # import the necessary packages
 from picamera.array import PiRGBArray
@@ -11,19 +11,48 @@ from picamera import PiCamera
 import time
 import cv2
 import numpy as np
-from matplotlib import pyplot as plt
 import ar_markers
-import ImageRW
 from Time import Time
 import threading
 from queue import Queue
-from sys import argv
 from http.client import HTTPConnection
+import RPi.GPIO as GPIO
 
+#motor init
+GPIO.setmode(GPIO.BCM)
+motor11=23
+motor12=24
+motor21=27
+motor22=17
+pwm1=25
+pwm2=22
 
+GPIO.setup(motor11,GPIO.OUT,initial=GPIO.LOW)
+GPIO.setup(motor12,GPIO.OUT,initial=GPIO.LOW)
+GPIO.setup(motor21,GPIO.OUT,initial=GPIO.LOW)
+GPIO.setup(motor22,GPIO.OUT,initial=GPIO.LOW)
+GPIO.setup(pwm1,GPIO.OUT,initial=GPIO.LOW)
+GPIO.setup(pwm2,GPIO.OUT,initial=GPIO.LOW)
+
+p1=GPIO.PWM(pwm1,100)
+p2=GPIO.PWM(pwm2,100)
+
+p1.start(0)
+p2.start(0)
+
+#motor action init
+speed = 50
+HALF=0
+MOTOR_SPEEDS = {
+    "q": (HALF, 1), "w": (1, 1), "e": (1, HALF),
+    "a": (-1, 1), "s": (0, 0), "d": (1, -1),
+    "z": (-HALF, -1), "x": (-1, -1), "c": (-1, -HALF),
+}
+
+# socket HTTPConnection
 conn = HTTPConnection(f"{host}:{PORT}")
 
-# You should replace these 3 lines with the output in calibration step
+# Information of picam calibration 
 DIM=(320, 240)
 K=np.array([[132.13704662178574, 0.0, 166.0686598959872], [0.0, 133.16643727381444, 123.27563566060049], [0.0, 0.0, 1.0]])
 D=np.array([[-0.07388057626177186], [0.037920859225125836], [-0.030619490583373123], [0.006819370459857302]])
@@ -44,22 +73,17 @@ def captured(img):
     cv2.imwrite(time.strftime('%m%d%H%M%S')+'.jpg', img)
 
 def cascade(img):
-        face_cascade = cv2.CascadeClassifier('./cascade.xml')
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        objs = face_cascade.detectMultiScale(gray, 1.3, 5)
-        for (x,y,w,h) in objs:
-            cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
-        if objs != ():
-            pass
-            print('stop')
+    face_cascade = cv2.CascadeClassifier('./cascade.xml')
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    objs = face_cascade.detectMultiScale(gray, 1.3, 5)
+    for (x,y,w,h) in objs:
+        cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
+    return objs
 
-#undistort
 def undistort(img):
     map1, map2 = cv2.fisheye.initUndistortRectifyMap(K, D, np.eye(3), K, DIM, cv2.CV_16SC2)
     img = cv2.remap(img, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
-
     return img
-
 
 def UploadNumpy(img):
     result, img = cv2.imencode('.jpg', img, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
@@ -71,10 +95,38 @@ def UploadNumpy(img):
     })
     res = conn.getresponse()
 
+def motor(action):
+    pw1 = speed * MOTOR_SPEEDS[action][0]
+    pw2 = speed * MOTOR_SPEEDS[action][1]
+    if pw1>0:
+        GPIO.output(motor11,GPIO.HIGH)
+        GPIO.output(motor12,GPIO.LOW)
+    elif pw1<0:
+        GPIO.output(motor11,GPIO.LOW)
+        GPIO.output(motor12,GPIO.HIGH)
+    else:
+        GPIO.output(motor11,GPIO.LOW)
+        GPIO.output(motor12,GPIO.LOW)
+    if pw2>0:
+        GPIO.output(motor21,GPIO.HIGH)
+        GPIO.output(motor22,GPIO.LOW)
+    elif pw2<0:
+        GPIO.output(motor21,GPIO.LOW)
+        GPIO.output(motor22,GPIO.HIGH)
+    else:
+        GPIO.output(motor21,GPIO.LOW)
+        GPIO.output(motor22,GPIO.LOW)
+    p1.ChangeDutyCycle(abs(pw1))
+    p2.ChangeDutyCycle(abs(pw2))
+    if action == 's':
+        print('stop')
+    elif action == 'a':
+        print('left')
+    elif action == 'd':
+        print('right')
 
-# capture frames from the camera
+
 def main(q):
-
     #for capture every second
     checktimeBefore = int(time.strftime('%S'))
 
@@ -87,21 +139,32 @@ def main(q):
         #undistort
         undistorted_image = undistort(image)
 
+        #----motor control----
+
         #cascade
-        cascade(undistorted_image)
+        if cascade(undistorted_image) != ():
+            #print('stop')
+            motor('s')
 
         #AR marker
         markers = ar_markers.detect_markers(undistorted_image)
         for marker in markers:
-            print('marker :', marker.id) #, marker.center)
+            if marker.id == 114:
+                #print('left', marker.id)
+                motor('a')
+            elif marker.id == 922:
+                #print('right', marker.id)
+                motor('d')
+            elif marker.id == 2537:
+                #print('stop', marker.id)
+                motor('s')               
             marker.highlite_marker(undistorted_image)
 
         # show the frame
         cv2.imshow("Frame", undistorted_image)
         key = cv2.waitKey(1) & 0xFF
-        
-        # clear the stream in preparation for the next frame
         rawCapture.truncate(0)
+
 
         # 1 : capture negative images every second
         # 2 : Threading (Streaming image)
@@ -123,6 +186,7 @@ def main(q):
         elif key == ord("\t"):
             captured(undistorted_image)
 
+
 def streaming(q):
     while True:
         qdata, evt = q.get()
@@ -130,17 +194,17 @@ def streaming(q):
         evt.set()
         q.task_done()
 
-q = Queue()
 
-thread_one = threading.Thread(target=main, args=(q,))
-thread_two = threading.Thread(target=streaming, args=(q,))
-thread_two.daemon = True
+if __name__ == "__main__":
+    q = Queue()
+    thread_one = threading.Thread(target=main, args=(q,))
+    thread_two = threading.Thread(target=streaming, args=(q,))
+    thread_two.daemon = True
 
-thread_one.start()
+    thread_one.start()
+    if switch == 2:
+        thread_two.start()
 
-if switch == 2:
-    thread_two.start()
-
-q.join()
+    q.join()
 
 
