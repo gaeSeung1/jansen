@@ -1,10 +1,3 @@
-PORT = 6000
-#host = 'gaeseung.local'
-host = 'localhost'
-
-# 0 : main, 1 : capture every second, 2 : main+streaming
-switch = 2
-
 # import the necessary packages
 from picamera.array import PiRGBArray
 from picamera import PiCamera
@@ -12,16 +5,8 @@ import time
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
-import ar_markers
-import ImageRW
-from Time import Time
 import threading
-from queue import Queue
-from sys import argv
-from http.client import HTTPConnection
-
-
-conn = HTTPConnection(f"{host}:{PORT}")
+import ar_markers
 
 # You should replace these 3 lines with the output in calibration step
 DIM=(320, 240)
@@ -50,34 +35,20 @@ def cascade(img):
         for (x,y,w,h) in objs:
             cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
         if objs != ():
-            pass
             print('stop')
 
 #undistort
 def undistort(img):
     map1, map2 = cv2.fisheye.initUndistortRectifyMap(K, D, np.eye(3), K, DIM, cv2.CV_16SC2)
-    img = cv2.remap(img, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+    undistorted_img = cv2.remap(img, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
 
-    return img
+    return undistorted_img
 
-
-def UploadNumpy(img):
-    result, img = cv2.imencode('.jpg', img, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
-    if not result:
-        raise Exception('Image encode error')
-
-    conn.request('POST', '/', img.tobytes(), {
-        "X-Client2Server" : "123"
-    })
-    res = conn.getresponse()
-
-
-# capture frames from the camera
-def main(q):
+def main():
+    # capture frames from the camera
 
     #for capture every second
     checktimeBefore = int(time.strftime('%S'))
-
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         # grab the raw NumPy array representing the image, then initialize the timestamp
         # and occupied/unoccupied text
@@ -103,44 +74,20 @@ def main(q):
         # clear the stream in preparation for the next frame
         rawCapture.truncate(0)
 
-        # 1 : capture negative images every second
-        # 2 : Threading (Streaming image)
-        if switch == 1:
-            checktime = int(time.strftime('%S'))
-            if checktime - checktimeBefore >=1:
-                captured(undistorted_image)      
-                checktimeBefore = checktime
+        # capture negative images every second
+        switch = 0
+        checktime = int(time.strftime('%S'))
+        if checktime - checktimeBefore >=1 and switch == 1:
+            captured(undistorted_image)
+            checktimeBefore = checktime
 
-        elif switch == 2:
-            evt = threading.Event()
-            qdata = undistorted_image
-            q.put((qdata, evt))
-
-
-        # q : break, tap : capture
+        # if the `q` key was pressed, break from the loop
         if key == ord("q"):
             break
         elif key == ord("\t"):
             captured(undistorted_image)
-
-def streaming(q):
-    while True:
-        qdata, evt = q.get()
-        UploadNumpy(qdata)
-        evt.set()
-        q.task_done()
-
-q = Queue()
-
-thread_one = threading.Thread(target=main, args=(q,))
-thread_two = threading.Thread(target=streaming, args=(q,))
-thread_two.daemon = True
-
-thread_one.start()
-
-if switch == 2:
-    thread_two.start()
-
-q.join()
-
-
+  
+    
+  
+if __name__ == '__main__':
+    main()

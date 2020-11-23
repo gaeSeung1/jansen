@@ -1,10 +1,3 @@
-PORT = 6000
-#host = 'gaeseung.local'
-host = 'localhost'
-
-# 0 : main, 1 : capture every second, 2 : main+streaming
-switch = 2
-
 # import the necessary packages
 from picamera.array import PiRGBArray
 from picamera import PiCamera
@@ -19,9 +12,14 @@ import threading
 from queue import Queue
 from sys import argv
 from http.client import HTTPConnection
+import json
 
-
+PORT = 6000
+#host = 'gaeseung.local'
+host = 'localhost'
 conn = HTTPConnection(f"{host}:{PORT}")
+# 0 : main, 1 : capture every second, 2 : main+streaming
+switch = 0
 
 # You should replace these 3 lines with the output in calibration step
 DIM=(320, 240)
@@ -71,6 +69,30 @@ def UploadNumpy(img):
     })
     res = conn.getresponse()
 
+def Uploadkeyboard(q):
+    try:
+        conn.request("GET", "/")
+    except ConnectionRefusedError as error:
+        print(error)
+        sleep(1)
+        
+    res = conn.getresponse()
+    while True:                     
+        #key read
+        chunk = res.readline()
+        if (chunk == b'\n'): continue
+        if (not chunk): break
+
+        chunk = chunk[:-1].decode()
+        data = json.loads(chunk)
+        print(Time(), data)
+        action = data['action']
+        if switch == 3:
+            evt = threading.Event()
+            qdata = data
+            q.put((qdata, evt))
+
+
 
 # capture frames from the camera
 def main(q):
@@ -104,20 +126,18 @@ def main(q):
         rawCapture.truncate(0)
 
         # 1 : capture negative images every second
-        # 2 : Threading (Streaming image)
-        if switch == 1:
-            checktime = int(time.strftime('%S'))
-            if checktime - checktimeBefore >=1:
-                captured(undistorted_image)      
-                checktimeBefore = checktime
+        checktime = int(time.strftime('%S'))
+        if checktime - checktimeBefore >=1 and switch == 1:
+            captured(undistorted_image)      
+            checktimeBefore = checktime
 
-        elif switch == 2:
+        # Threading
+        if switch == 2:
             evt = threading.Event()
             qdata = undistorted_image
             q.put((qdata, evt))
 
-
-        # q : break, tap : capture
+        # if the `q` key was pressed, break from the loop
         if key == ord("q"):
             break
         elif key == ord("\t"):
@@ -134,12 +154,14 @@ q = Queue()
 
 thread_one = threading.Thread(target=main, args=(q,))
 thread_two = threading.Thread(target=streaming, args=(q,))
+#thread_three = threading.Thread(target=Uploadkeyboard, args=(q,))
 thread_two.daemon = True
+#thread_three.daemon = True
 
 thread_one.start()
-
 if switch == 2:
     thread_two.start()
+#thread_three.start()
 
 q.join()
 
