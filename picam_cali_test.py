@@ -11,6 +11,7 @@ from Time import Time
 import threading
 from queue import Queue
 
+
 # You should replace these 3 lines with the output in calibration step
 DIM=(320, 240)
 K=np.array([[132.13704662178574, 0.0, 166.0686598959872], [0.0, 133.16643727381444, 123.27563566060049], [0.0, 0.0, 1.0]])
@@ -39,7 +40,7 @@ def cascade(img):
             cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
         if objs != ():
             pass
-            #print('stop')
+            print('stop')
 
 #undistort
 def undistort(img):
@@ -49,12 +50,7 @@ def undistort(img):
     return img
 
 
-
-
 # capture frames from the camera
-
-
-
 def main(q):
 
     #for capture every second
@@ -63,9 +59,6 @@ def main(q):
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         # grab the raw NumPy array representing the image, then initialize the timestamp
         # and occupied/unoccupied text
-
-        evt = threading.Event()
-
 
         image = frame.array
 
@@ -78,7 +71,7 @@ def main(q):
         #AR marker
         markers = ar_markers.detect_markers(undistorted_image)
         for marker in markers:
-            #print('marker :', marker.id) #, marker.center)
+            print('marker :', marker.id) #, marker.center)
             marker.highlite_marker(undistorted_image)
 
         # show the frame
@@ -95,11 +88,11 @@ def main(q):
             captured(undistorted_image)      
             checktimeBefore = checktime
 
-        # Image_Streaming    
-        #ImageRW.UploadNumpy(undistorted_image)
-
+        # Threading
+        evt = threading.Event()
         data = undistorted_image
         q.put((data, evt))
+
         # if the `q` key was pressed, break from the loop
         if key == ord("q"):
             break
@@ -109,18 +102,19 @@ def main(q):
 def streaming(q):
     while True:
         data, evt = q.get()
-        print(data)
+        ImageRW.UploadNumpy(data)
         evt.set()
         q.task_done()
-
+        
 q = Queue()
 
 thread_one = threading.Thread(target=main, args=(q,))
 thread_two = threading.Thread(target=streaming, args=(q,))
 #thread_one.daemon = True
 thread_two.daemon = True
+
 thread_one.start()
 thread_two.start()
- 
+
 q.join()
 
