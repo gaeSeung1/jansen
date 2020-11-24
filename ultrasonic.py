@@ -26,12 +26,12 @@ def measure():
 GPIO.setmode(GPIO.BCM)
 GPIO_TRIGGER = 14
 GPIO_ECHO    = 15
- 
 GPIO.setup(GPIO_TRIGGER,GPIO.OUT)
 GPIO.setup(GPIO_ECHO,GPIO.IN)
 GPIO.output(GPIO_TRIGGER, False)
-
 time.sleep(.1)
+
+
 
 while True:
 	print(measure())
