@@ -125,8 +125,9 @@ def main():
         #----motor control----
 
         #cascade
-        if cascade(undistorted_image) != ():
-            print('stop')
+#        cascade(undistorted_image)
+#        if cascade(undistorted_image) != ():
+#            print('stop')
 
         #AR marker
         markers = ar_markers.detect_markers(undistorted_image)
