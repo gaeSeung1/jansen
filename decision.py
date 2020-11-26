@@ -169,7 +169,7 @@ def set_path3(image, forward_criteria):
 
 if __name__ == "__main__":
     start_time=time.time()
-    path = './raw_image_set_1/*.png'
+    path = '*.jpg'
     file_list = glob.glob(path)
     cnt = 0
     for i in file_list:
