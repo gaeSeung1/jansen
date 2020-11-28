@@ -1,9 +1,9 @@
 PORT = 6000
-#host = 'gaeseung.local'
-host = 'localhost'
+host = 'gaeseung.local'
+#host = 'localhost'
 
-# 0 : main, 1 : capture every second, 2 : main+streaming
-switch = 0
+# 0 : main, 1 : main+streaming
+switch = 1
 
 # import the necessary packages
 from picamera.array import PiRGBArray
@@ -17,6 +17,7 @@ import threading
 from queue import Queue
 from http.client import HTTPConnection
 import RPi.GPIO as GPIO
+from decision import *
 
 #motor init
 GPIO.setmode(GPIO.BCM)
@@ -49,7 +50,7 @@ GPIO.output(GPIO_TRIGGER, False)
 
 #motor action init
 speed = 50
-HALF=0
+HALF=0.2
 MOTOR_SPEEDS = {
     "q": (HALF, 1), "w": (1, 1), "e": (1, HALF),
     "a": (-1, 1), "s": (0, 0), "d": (1, -1),
@@ -125,13 +126,23 @@ def motor(action):
         GPIO.output(motor22,GPIO.LOW)
     p1.ChangeDutyCycle(abs(pw1))
     p2.ChangeDutyCycle(abs(pw2))
-    if action == 's':
-        print('stop')
-    elif action == 'a':
-        print('left')
-    elif action == 'd':
-        print('right')
 
+    if action == 's':
+        direction = 'stop'
+    elif action == 'q':
+        direction = 'left'
+    elif action == 'e':
+        direction = 'right'
+    elif action == 'a':
+        direction = 'spin left'
+    elif action == 'd':
+        direction = 'spin right'
+    elif action == 'w':
+        direction = 'forward'
+    elif action == 'x':
+        direction = 'backward'
+    return direction
+    
 def ultrasonic():
     GPIO.output(GPIO_TRIGGER, True)
     time.sleep(0.00001)
@@ -168,54 +179,79 @@ def main(q):
         #undistort
         undistorted_image = undistort(image)
 
-        #----motor control----
+
+#--------------motor control--------------
+
+        #decision (action, round(m,4), forward, left_line, right_line, center, direction)
+        masked_image=select_white(undistorted_image,160)
+        result=set_path3(masked_image,0.25)
+
+        #line marker
+        line = []
+        #right        
+        for j in range(result[2]):
+            left_coord = (+result[5]+1+result[3][j], 239-j)
+            line.append(left_coord)
+            undistorted_image = cv2.line(undistorted_image, left_coord, left_coord,(0,255,0), 4)
+        
+        #left
+        for j in range(result[2]):
+            right_coord = (result[5]+1-result[4][j], 239-j)
+            line.append(right_coord)
+            undistorted_image = cv2.line(undistorted_image, right_coord, right_coord,(0,255,0), 4)
+        
+        #slope
+        try:
+            undistorted_image = cv2.line(undistorted_image, result[6][0], result[6][1],(0,0,255), 4)
+        except:
+            pass    
+        #decision motor
+        direction = motor(result[0])
+        
+#----------------------------
 
         #ultrasonic
         ultra = ultrasonic()
         if ultra > 0 and ultra < 10:
             #print('stop')
-            motor('s')
+            direction = motor('s')
             print(ultra)
 
         #cascade
-        if cascade(undistorted_image) != ():
-            #print('stop')
-            motor('s')
+        cas = len(cascade(undistorted_image))
+        if cas != 0:
+            direction = motor('s')
             
-
         #AR marker
         markers = ar_markers.detect_markers(undistorted_image)
         for marker in markers:
             if marker.id == 114:
-                #print('left', marker.id)
-                motor('a')
+                direction = motor('q')
             elif marker.id == 922:
-                #print('right', marker.id)
-                motor('d')
+                direction = motor('e')
             elif marker.id == 2537:
-                #print('stop', marker.id)
-                motor('s')               
+                direction = motor('s')               
             marker.highlite_marker(undistorted_image)
-
+#----------------------------
+        #putText
+        try:
+            #slope
+            cv2.putText(undistorted_image,'m = '+str(result[1]), (10,20),cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,255), 1) 
+            #direction
+            cv2.putText(undistorted_image, direction, (10,40),cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,255), 1) 
+        except:
+            pass
+#----------------------------
         # show the frame
         cv2.imshow("Frame", undistorted_image)
         key = cv2.waitKey(1) & 0xFF
         rawCapture.truncate(0)
 
-
-        # 1 : capture negative images every second
-        # 2 : Threading (Streaming image)
+        #Threading
         if switch == 1:
-            checktime = int(time.strftime('%S'))
-            if checktime - checktimeBefore >=1:
-                captured(undistorted_image)      
-                checktimeBefore = checktime
-
-        elif switch == 2:
             evt = threading.Event()
             qdata = undistorted_image
             q.put((qdata, evt))
-
 
         # q : break, tap : capture
         if key == ord("q"):
@@ -239,7 +275,7 @@ if __name__ == "__main__":
     thread_two.daemon = True
 
     thread_one.start()
-    if switch == 2:
+    if switch == 1:
         thread_two.start()
 
     q.join()

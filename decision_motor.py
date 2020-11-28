@@ -25,7 +25,6 @@ def set_path3(image, forward_criteria):
     left=0
     right=width
     center = int((left+right)/2)       
-    direction = 0
 
     #길 좌우 경계값 찾기
     try:      
@@ -64,25 +63,22 @@ def set_path3(image, forward_criteria):
         #기울기 표시
         direction = ((int(width/2),height),(int(width/2)-int(forward*m),height-forward))
 
-        #방향 결정
+
         if forward < 20 or forward < 50 and abs(m) < 0.35:
-            action = 'x'
+            result = 'backward'
         elif abs(m) < forward_criteria:
-            action = 'w'
+            result = 'forward'
         elif m > 0:
-            action = 'q'
+            result = 'left'
         else:
-            action = 'e'
+            result = 'right'
     except:
-        action = 'x'
+        result = 'backward'
         m = 0
     
-    return action, round(m,4), forward, left_line, right_line, center, direction
+    return result, round(m,4), forward, left_line, right_line, center, direction
 
 
-
-
-"""
 if __name__ == "__main__":
     start_time=time.time()
     path = '*.jpg'
@@ -90,7 +86,7 @@ if __name__ == "__main__":
     cnt = 0
     for i in file_list:
         image = cv2.imread(i)
-        #name, extension = os.path.splitext(os.path.basename(i))
+        name, extension = os.path.splitext(os.path.basename(i))
         masked_image=select_white(image,160)
         result=set_path3(masked_image,0.25)
 
@@ -113,17 +109,22 @@ if __name__ == "__main__":
         #print(line)  
 
         #기울기
-        try:
-            masked_image = cv2.line(masked_image, result[6][0], result[6][1],(255,255,255), 5)
-            print(result[6])
-        except:
-            pass
+        masked_image = cv2.line(masked_image, result[6][0], result[6][1],(255,255,255), 5)
+        print(result[6])
 
-        print(result[0], result[1])
+
+        print(name, result[0], result[1])
         
         
         cv2.imshow("video", masked_image)
+
+
+        if result[0][0] in name[-3:]:
+            answer = '○'
+            cnt += 1
+        else:
+            answer = '×'
+
         cv2.waitKey(0)        
     cv2.destroyAllWindows()
     #print('\nAvearage FPS:', round(len(file_list)/(time.time()-start_time),2), "Acurracy:", str(round(100*cnt/len(file_list), 2))+" %")
-"""
