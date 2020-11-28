@@ -78,7 +78,11 @@ def region_of_interest(image, w=0.05, point=(0.2,0.5)):
 
 
 if __name__ == '__main__':
+<<<<<<< HEAD
     image_array = cv2.imread('1125193134.jpg')
+=======
+    image_array = cv2.imread('*.jpg')
+>>>>>>> e93103577cbff93ed346eb34ddacbe5373d9cb60
     
 
     
