@@ -7,16 +7,16 @@ from picamera import PiCamera
 import time
 import cv2
 import numpy as np
-import ar_markers
 from Time import Time
 import RPi.GPIO as GPIO
+from detect import detect_markers
 
 # motor init
 GPIO.setmode(GPIO.BCM)
 motor11=23
 motor12=24
-motor21=27
-motor22=17
+motor21=17
+motor22=27
 pwm1=25
 pwm2=22
 
@@ -35,6 +35,7 @@ p2.start(0)
 
 # motor action init
 speed = 80
+balance = 1
 HALF=0
 MOTOR_SPEEDS = {
     ord("q"): (HALF, 1), ord("w"): (1, 1), ord("e"): (1, HALF),
@@ -56,7 +57,7 @@ camera.resolution = (320, 240)
 camera.vflip = True
 camera.hflip = True
 #shutterspeed
-camera.framerate = 32
+camera.framerate = 42
 rawCapture = PiRGBArray(camera, size=camera.resolution)
 # allow the camera to warmup
 time.sleep(0.1)
@@ -78,8 +79,8 @@ def undistort(img):
     return img
 
 def motor(action):
-    pw1 = speed * MOTOR_SPEEDS[action][0]
-    pw2 = speed * MOTOR_SPEEDS[action][1]
+    pw1 = min(speed * MOTOR_SPEEDS[action][0] * balance, 100)
+    pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
     if pw1>0:
         GPIO.output(motor11,GPIO.HIGH)
         GPIO.output(motor12,GPIO.LOW)
@@ -112,7 +113,7 @@ def main():
     motor_key = 115
     #for capture every second
     checktimeBefore = int(time.strftime('%S'))
-
+    cas_cnt = 0
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         # grab the raw NumPy array representing the image, then initialize the timestamp
         # and occupied/unoccupied text
@@ -122,25 +123,35 @@ def main():
         #undistort
         undistorted_image = undistort(image)
 
+        #brightness
+        M = np.ones(undistorted_image.shape, dtype = "uint8") * 50
+        undistorted_image = cv2.add(undistorted_image, M)
+
         #----motor control----
 
         #cascade
-#        cas = len(cascade(undistorted_image))
-#        if cas != 0:
-#            print(cas)
-#            motor('s')
+        cas = len(cascade(undistorted_image))
+        if cas != 0:
+            cas_cnt += 1
+            print(cas,cas_cnt)
+
+            #motor('s')
 
         #AR marker
-
-        markers = ar_markers.detect_markers(undistorted_image)
+        distance = detect_markers(undistorted_image)[1]
+        markers = detect_markers(undistorted_image)[0]
+        
         for marker in markers:
-            if marker.id == 114:
-                print('left', marker.id)
-            elif marker.id == 922:
-                print('right', marker.id)
-            elif marker.id == 2537:
-                print('stop', marker.id)              
             marker.highlite_marker(undistorted_image)
+            if distance > 60:
+                print("distance :", distance)
+                if marker.id == 114:
+                    print('left', marker.id)
+                elif marker.id == 922:
+                    print('right', marker.id)
+                elif marker.id == 2537:
+                    print('stop', marker.id)              
+                
 
         # show the frame
         cv2.imshow("Frame", undistorted_image)
@@ -155,7 +166,7 @@ def main():
             if checktime - checktimeBefore >=1:
                 captured(undistorted_image)      
                 checktimeBefore = checktime
-        print(key)
+        #print(key)
         if key == 27:
             break
         elif key == ord("\t"):
